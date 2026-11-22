@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tugas 1 – Penjadwalan Disk (Hard Disk Scheduling)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;800&family=Source+Serif+4:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f6f9; --paper:#ffffff; --ink:#16212b; --muted:#5a6a78;
+  --line:#d5dee6; --accent:#0b6e8a; --jump:#c2410c; --good:#176b3a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 "Source Serif 4",Georgia,serif}
+main{max-width:860px;margin:0 auto;padding:32px 18px 64px}
+h1,h2,h3,.sans{font-family:"Public Sans",system-ui,sans-serif}
+h1{font-size:clamp(1.8rem,4.5vw,2.6rem);line-height:1.15;margin:0 0 6px;font-weight:800}
+h2{font-size:1.45rem;margin:0 0 10px;font-weight:800}
+h3{font-size:1.05rem;margin:22px 0 8px;font-weight:600}
+.deadline{color:var(--muted);margin:0 0 28px;font-family:"Public Sans",sans-serif;font-size:.95rem}
+section{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:22px 22px 24px;margin:0 0 22px}
+.queue{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.queue span{font-family:"Public Sans",sans-serif;font-weight:600;background:#e6f0f5;border:1px solid #b9d4e0;padding:2px 10px;border-radius:4px}
+.tablewrap{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-family:"Public Sans",sans-serif;font-size:.92rem}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:center;white-space:nowrap}
+th{background:#eaf0f4;font-weight:600}
+tr.jump td{color:var(--jump);background:#fff4ec}
+tfoot td{font-weight:800;background:#eaf0f4}
+.total{font-family:"Public Sans",sans-serif;font-weight:800;color:var(--accent);margin:10px 0 0}
+.seq{font-family:"Public Sans",sans-serif;font-size:.95rem;background:#f3f6f9;border-left:3px solid var(--accent);padding:8px 12px;overflow-x:auto}
+svg{width:100%;height:auto;display:block;background:#fbfdfe;border:1px solid var(--line);border-radius:4px}
+.legend{font-family:"Public Sans",sans-serif;font-size:.85rem;color:var(--muted)}
+.bar{display:grid;grid-template-columns:130px 1fr 60px;align-items:center;gap:10px;font-family:"Public Sans",sans-serif;font-size:.92rem;margin:6px 0}
+.bar i{display:block;height:16px;background:var(--accent);border-radius:2px}
+.bar.best i{background:var(--good)}
+.note{font-size:.92rem;color:var(--muted)}
+footer{font-family:"Public Sans",sans-serif;font-size:.85rem;color:var(--muted);text-align:center;margin-top:30px}
+code{font-family:"Public Sans",sans-serif;background:#eaf0f4;padding:1px 6px;border-radius:3px}
+</style>
+</head>
+<body>
+<main>
+<h1>Tugas 1 – Penjadwalan Hard Disk</h1>
+<p class="deadline">Nama Penegrja: Faiz Husni Firdhaus</p>
+
+<section id="soal">
+  <h2>Soal</h2>
+  <p>Sebuah <em>hard disk</em> memiliki <strong>200 track</strong> bernomor <strong>0 hingga 199</strong>. Saat ini posisi <em>head</em> berada pada <strong>track 50</strong>. Antrian permintaan akses track yang masuk secara berurutan adalah:</p>
+  <div class="queue" id="queue"></div>
+  <p>Hitunglah total banyaknya lintasan yang dilewati menggunakan seluruh algoritma yang ada (dalam bentuk tabel) dan gambarkan arah proses yang terjadi secara lengkap.</p>
+</section>
+
+<section id="asumsi">
+  <h2>Asumsi dan Cara Menghitung</h2>
+  <ul>
+    <li>Jumlah lintasan (<em>head movement</em>) = jumlah selisih mutlak antar posisi head yang berurutan: <code>|track tujuan − track asal|</code>.</li>
+    <li>Soal tidak menyebut arah awal head, sehingga untuk SCAN, C-SCAN, LOOK, dan C-LOOK dipakai arah awal <strong>menuju track yang lebih besar (naik)</strong>. Hasil untuk arah awal turun ada di bagian terakhir.</li>
+    <li>Track yang sama (43 muncul 3 kali, 24 muncul 2 kali) dilayani sekaligus saat head tiba di track tersebut, sehingga tidak menambah lintasan. Pada tabel tertulis <em>43 (×3)</em>. Pada FCFS, permintaan tetap dilayani sesuai urutan masuk.</li>
+    <li>Pada C-SCAN dan C-LOOK, perpindahan "lompat" kembali ke ujung lain <strong>dihitung</strong> sebagai lintasan (baris berwarna oranye, garis putus-putus pada gambar).</li>
+  </ul>
+</section>
+
+<div id="algos"></div>
+
+<section id="rekap">
+  <h2>Rekapitulasi dan Kesimpulan</h2>
+  <div class="tablewrap"><table id="recap"></table></div>
+  <div id="bars" style="margin-top:14px"></div>
+  <p id="kesimpulan"></p>
+</section>
+
+<section id="variasi">
+  <h2>Variasi: Arah Awal Turun (menuju track 0)</h2>
+  <div class="tablewrap"><table id="alt"></table></div>
+  <p class="note">FCFS dan SSTF tidak bergantung pada arah awal sehingga hasilnya tetap.</p>
+</section>
+
+<footer>Dikerjakan sebagai postingan web (GitHub Pages) sesuai ketentuan tugas.</footer>
+</main>
+
+<script>
+const START = 50, MAXT = 199, MINT = 0;
+const REQ = [82,170,43,140,24,16,190,123,67,43,162,24,71,111,43,178];
+
+/* ---------- logika algoritma ---------- */
+// step = {from, to, jump, label}
+const uniq = a => [...new Set(a)];
+const count = t => REQ.filter(x => x === t).length;
+const lab = t => count(t) > 1 ? `${t} (×${count(t)})` : `${t}`;
+const U = uniq(REQ);
+const ups = U.filter(t => t > START).sort((a,b)=>a-b);
+const lows = U.filter(t => t < START).sort((a,b)=>a-b);
+
+function stepsFrom(points){            // points: [{t, jump?, label?, end?}]
+  const out = []; let cur = START;
+  points.forEach(p => {
+    out.push({from:cur, to:p.t, jump:!!p.jump, label:p.label ?? lab(p.t)});
+    cur = p.t;
+  });
+  return out;
+}
+const P = (arr) => arr.map(t => ({t}));
+const END = (t) => ({t, label:`${t} (ujung disk)`});
+
+function fcfs(){
+  return stepsFrom(REQ.map(t => ({t, label:`${t}`})));
+}
+function sstf(){
+  let rest = [...U], cur = START, pts = [];
+  while(rest.length){
+    rest.sort((a,b)=>Math.abs(a-cur)-Math.abs(b-cur) || a-b);
+    const n = rest.shift(); pts.push({t:n}); cur = n;
+  }
+  return stepsFrom(pts);
+}
+const desc = a => [...a].sort((x,y)=>y-x);
+function scan(dir){
+  return dir==='up'
+    ? stepsFrom([...P(ups), END(MAXT), ...P(desc(lows))])
+    : stepsFrom([...P(desc(lows)), END(MINT), ...P(ups)]);
+}
+function cscan(dir){
+  return dir==='up'
+    ? stepsFrom([...P(ups), END(MAXT), {t:MINT, jump:true, label:'0 (lompat)'}, ...P(lows)])
+    : stepsFrom([...P(desc(lows)), END(MINT), {t:MAXT, jump:true, label:'199 (lompat)'}, ...P(desc(ups))]);
+}
+function look(dir){
+  return dir==='up'
+    ? stepsFrom([...P(ups), ...P(desc(lows))])
+    : stepsFrom([...P(desc(lows)), ...P(ups)]);
+}
+function clook(dir){
+  if(dir==='up'){
+    const l = lows.map((t,i)=> i===0 ? {t, jump:true, label:lab(t)+' (lompat)'} : {t});
+    return stepsFrom([...P(ups), ...l]);
+  }
+  const d = desc(ups).map((t,i)=> i===0 ? {t, jump:true, label:lab(t)+' (lompat)'} : {t});
+  return stepsFrom([...P(desc(lows)), ...d]);
+}
+const total = s => s.reduce((a,x)=>a+Math.abs(x.to-x.from),0);
+
+const ALGOS = [
+  {id:'fcfs',  name:'FCFS (First Come First Served)', run:()=>fcfs(),
+   desc:'Permintaan dilayani persis sesuai urutan kedatangan, tanpa mempertimbangkan jarak.'},
+  {id:'sstf',  name:'SSTF (Shortest Seek Time First)', run:()=>sstf(),
+   desc:'Dari posisi head saat ini, selalu pilih permintaan dengan jarak terdekat.'},
+  {id:'scan',  name:'SCAN (Elevator)', run:d=>scan(d),
+   desc:'Head bergerak ke satu arah sampai ujung disk (track 199), melayani semua permintaan di jalur itu, lalu berbalik arah.'},
+  {id:'cscan', name:'C-SCAN (Circular SCAN)', run:d=>cscan(d),
+   desc:'Head bergerak naik sampai ujung disk (199), langsung melompat ke track 0 tanpa melayani, lalu naik lagi.'},
+  {id:'look',  name:'LOOK', run:d=>look(d),
+   desc:'Seperti SCAN, tetapi head hanya berjalan sampai permintaan terjauh (190), tidak sampai ujung disk, lalu berbalik.'},
+  {id:'clook', name:'C-LOOK (Circular LOOK)', run:d=>clook(d),
+   desc:'Seperti C-SCAN, tetapi head hanya sampai permintaan terjauh (190), lalu melompat ke permintaan terkecil (16).'},
+];
+
+if (typeof module !== 'undefined') module.exports = {ALGOS, total};
+
+/* ---------- tampilan ---------- */
+if (typeof document !== 'undefined') {
+  const $ = id => document.getElementById(id);
+  $('queue').innerHTML = REQ.map(t=>`<span>${t}</span>`).join('');
+
+  function tableHTML(steps){
+    let cum = 0;
+    const rows = steps.map((s,i)=>{
+      const d = Math.abs(s.to-s.from); cum += d;
+      return `<tr class="${s.jump?'jump':''}"><td>${i+1}</td><td>${s.from}</td><td>${s.label}</td>
+        <td>|${s.to} − ${s.from}| = ${d}</td><td>${cum}</td></tr>`;
+    }).join('');
+    return `<table><thead><tr><th>Langkah</th><th>Dari</th><th>Ke</th><th>Perhitungan</th><th>Kumulatif</th></tr></thead>
+      <tbody>${rows}</tbody><tfoot><tr><td colspan="4">Total lintasan</td><td>${cum}</td></tr></tfoot></table>`;
+  }
+
+  function chartSVG(steps){
+    const W=780, padL=28, padR=28, top=34, gap=26;
+    const H = top + (steps.length)*gap + 28;
+    const x = t => padL + (t/MAXT)*(W-padL-padR);
+    const y = i => top + i*gap;
+    let g = '';
+    for(let t=0;t<=MAXT;t+=25){
+      g += `<line x1="${x(t)}" y1="${top-12}" x2="${x(t)}" y2="${H-18}" stroke="#e2eaf0"/>
+            <text x="${x(t)}" y="14" font-size="11" text-anchor="middle" fill="#5a6a78">${t}</text>`;
+    }
+    g += `<text x="${x(MAXT)}" y="14" font-size="11" text-anchor="middle" fill="#5a6a78">199</text>`;
+    const pts = [{t:START,i:0},...steps.map((s,i)=>({t:s.to,i:i+1,jump:s.jump,label:s.label}))];
+    let lines='', dots='';
+    for(let k=1;k<pts.length;k++){
+      const a=pts[k-1], b=pts[k];
+      lines += `<line x1="${x(a.t)}" y1="${y(a.i)}" x2="${x(b.t)}" y2="${y(b.i)}"
+        stroke="${b.jump?'#c2410c':'#0b6e8a'}" stroke-width="2" ${b.jump?'stroke-dasharray="6 4"':''}/>`;
+      // panah di titik tengah segmen
+      const mx=(x(a.t)+x(b.t))/2, my=(y(a.i)+y(b.i))/2;
+      const ang=Math.atan2(y(b.i)-y(a.i), x(b.t)-x(a.t))*180/Math.PI;
+      lines += `<path d="M-5,-4 L3,0 L-5,4 Z" transform="translate(${mx},${my}) rotate(${ang})" fill="${b.jump?'#c2410c':'#0b6e8a'}"/>`;
+    }
+    pts.forEach((p,k)=>{
+      const first = k===0;
+      dots += `<circle cx="${x(p.t)}" cy="${y(p.i)}" r="${first?5:3.6}" fill="${first?'#16212b':'#fff'}" stroke="${first?'#16212b':'#0b6e8a'}" stroke-width="2"/>
+        <text x="${x(p.t)}" y="${y(p.i)-8}" font-size="10.5" text-anchor="middle" fill="#16212b" font-family="Public Sans,sans-serif">${p.t}</text>`;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Diagram pergerakan head">${g}${lines}${dots}</svg>`;
+  }
+
+  const main = [], root = $('algos');
+  ALGOS.forEach((a,n)=>{
+    const steps = a.run('up'); const tot = total(steps);
+    main.push({name:a.name.split(' ')[0], tot});
+    const seq = [START, ...steps.map(s=>s.to)].join(' → ');
+    root.insertAdjacentHTML('beforeend', `
+    <section id="${a.id}">
+      <h2>${n+1}. ${a.name}</h2>
+      <p>${a.desc}</p>
+      <p class="sans" style="margin:10px 0 4px"><strong>Urutan pelayanan:</strong></p>
+      <div class="seq">${seq}</div>
+      <h3>Tabel perhitungan</h3>
+      <div class="tablewrap">${tableHTML(steps)}</div>
+      <p class="total">Total lintasan = ${tot} track</p>
+      <h3>Gambar arah pergerakan head</h3>
+      <div class="tablewrap">${chartSVG(steps)}</div>
+      <p class="legend">Titik hitam = posisi awal (50). Garis biru = pergerakan head, garis oranye putus-putus = lompatan. Sumbu atas = nomor track, ke bawah = urutan langkah.</p>
+    </section>`);
+  });
+
+  // rekap
+  const min = Math.min(...main.map(m=>m.tot)), max = Math.max(...main.map(m=>m.tot));
+  $('recap').innerHTML = `<thead><tr><th>No</th><th>Algoritma</th><th>Total lintasan (track)</th></tr></thead><tbody>` +
+    main.map((m,i)=>`<tr><td>${i+1}</td><td>${m.name}</td><td>${m.tot}</td></tr>`).join('') + `</tbody>`;
+  $('bars').innerHTML = main.map(m=>`<div class="bar ${m.tot===min?'best':''}"><span>${m.name}</span>
+    <i style="width:${(m.tot/max*100).toFixed(1)}%"></i><b>${m.tot}</b></div>`).join('');
+  const best = main.find(m=>m.tot===min), worst = main.find(m=>m.tot===max);
+  const lk = main.find(m=>m.name==='LOOK'), sc = main.find(m=>m.name==='SCAN');
+  $('kesimpulan').innerHTML = `<strong>Kesimpulan:</strong> algoritma dengan total lintasan paling sedikit adalah
+    <strong>${best.name} (${best.tot} track)</strong>, sedangkan yang paling banyak adalah
+    <strong>${worst.name} (${worst.tot} track)</strong>. LOOK (${lk.tot}) lebih hemat daripada SCAN (${sc.tot})
+    karena head tidak perlu berjalan sampai ujung disk. Perlu dicatat, SSTF bisa menyebabkan permintaan yang jauh
+    menunggu lama (<em>starvation</em>), sedangkan SCAN/LOOK lebih adil bagi semua permintaan.`;
+
+  // variasi arah turun
+  const names = ['SCAN','C-SCAN','LOOK','C-LOOK'];
+  const fns = [scan,cscan,look,clook];
+  $('alt').innerHTML = `<thead><tr><th>Algoritma</th><th>Arah awal naik</th><th>Arah awal turun</th></tr></thead><tbody>` +
+    names.map((n,i)=>`<tr><td>${n}</td><td>${total(fns[i]('up'))}</td><td>${total(fns[i]('down'))}</td></tr>`).join('') + `</tbody>`;
+}
+</script>
+</body>
+</html>
